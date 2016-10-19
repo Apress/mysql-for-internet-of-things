@@ -1,0 +1,22 @@
+# NOTE: See the online MySQL Utilities documentation if you need help with these commands.
+# Clone the existing server running on port 3306
+mysqlserverclone --server=root:secret@localhost:3306 --new-data=/tmp/13001 --new-port=13001 --new-id=1 --root-password=root --del --mysqld="--log_bin=mysql-bin --gtid-mode=on --enforce-gtid-consistency --master-info-repository=table --report-host=localhost --report-port=13001"
+mysqlserverclone --server=root:secret@localhost:3306 --new-data=/tmp/13002 --new-port=13002 --new-id=2 --root-password=root --del --mysqld="--log_bin=mysql-bin --gtid-mode=on --enforce-gtid-consistency --master-info-repository=table --report-host=localhost --report-port=13002"
+mysqlserverclone --server=root:secret@localhost:3306 --new-data=/tmp/13003 --new-port=13003 --new-id=3 --root-password=root --del --mysqld="--log_bin=mysql-bin --gtid-mode=on --enforce-gtid-consistency --master-info-repository=table --report-host=localhost --report-port=13003"
+mysqlserverclone --server=root:secret@localhost:3306 --new-data=/tmp/13004 --new-port=13004 --new-id=4 --root-password=root --del --mysqld="--log_bin=mysql-bin --gtid-mode=on --enforce-gtid-consistency --master-info-repository=table --report-host=localhost --report-port=13004"
+
+# Do this for each server in the topology (even the master)
+mysql -uroot -proot -h127.0.0.1 --port=13001
+SET @@sql_log_bin=0;
+CREATE USER 'rpl'@'localhost' IDENTIFIED BY 'rpl';
+GRANT REPLICATION SLAVE ON *.* TO 'rpl'@'localhost';
+GRANT SELECT ON performance_schema.global_variables TO 'rpl'@'localhost';
+SET @@sql_log_bin=1;
+
+# Setup replication
+mysqlreplicate --master=root:root@localhost:13001 --slave=root:root@localhost:13002 --rpl-user=rpl:rpl
+mysqlreplicate --master=root:root@localhost:13001 --slave=root:root@localhost:13003 --rpl-user=rpl:rpl
+mysqlreplicate --master=root:root@localhost:13001 --slave=root:root@localhost:13004 --rpl-user=rpl:rpl
+
+# Show the topology map
+mysqlrplshow --master=root:root@localhost:13001 --disco=root:root
